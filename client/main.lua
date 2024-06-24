@@ -85,9 +85,9 @@ AddEventHandler('wanted:client:UpdateWantedLevel', function(level)
     updatePlayerBlip()
     
     if myWantedLevel > 0 and oldLevel == 0 then
-        TriggerEvent('rNotify:NotifyLeft', "YOU ARE A WANTED PERSON", "DAMN", "generic_textures", "tick", 4000)
+        TriggerEvent('rNotify:NotifyLeft', "YOU ARE A WANTED PERSON", "DAMN", "generic_textures", "temp_pedshot", 4000)
     elseif myWantedLevel == 0 and oldLevel > 0 then
-        TriggerEvent('rNotify:NotifyLeft', "YOU'RE NO LONGER WANTED", "PHEW", "generic_textures", "tick", 4000)
+        TriggerEvent('rNotify:NotifyLeft', "YOU'RE NO LONGER WANTED", "PHEW", "generic_textures", "temp_pedshot", 4000)
         removePlayerBlip()
     end
 end)
@@ -100,9 +100,9 @@ end)
 RegisterNetEvent('wanted:client:NotifyWanted')
 AddEventHandler('wanted:client:NotifyWanted', function(playerName, isWanted)
     if isWanted then
-        TriggerEvent('rNotify:NotifyLeft', playerName .. " IS NOW WANTED", "HUNT THEM", "generic_textures", "tick", 4000)
+        TriggerEvent('rNotify:NotifyLeft', playerName .. " IS NOW WANTED", "HUNT THEM", "generic_textures", "temp_pedshot", 4000)
     else
-        TriggerEvent('rNotify:NotifyLeft', playerName .. " IS NO LONGER WANTED", "PHEW", "generic_textures", "tick", 4000)
+        TriggerEvent('rNotify:NotifyLeft', playerName .. " IS NO LONGER WANTED", "PHEW", "generic_textures", "temp_pedshot", 4000)
     end
 end)
 
