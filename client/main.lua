@@ -10,6 +10,11 @@ local function removePlayerBlip()
     end
 end
 
+local function isPolice()
+    local Player = RSGCore.Functions.GetPlayerData()
+    return Player.job.type == 'leo' 
+end
+
 local function createOrUpdateBlip(coords, isWanted)
     removePlayerBlip()
     
@@ -49,13 +54,13 @@ local function updatePlayerBlip()
 end
 
 local function updateWantedBlips(wantedPlayers)
-    -- Remove all existing wanted blips
+    
     for playerId, blip in pairs(wantedBlips) do
         RemoveBlip(blip)
     end
     wantedBlips = {}
     
-    -- If wantedPlayers is nil, just return after clearing existing blips
+    
     if not wantedPlayers then return end
     
     for playerId, wantedLevel in pairs(wantedPlayers) do
@@ -102,12 +107,16 @@ AddEventHandler('wanted:client:NotifyWanted', function(playerName, isWanted)
 end)
 
 RegisterCommand('setwanted', function(source, args)
-    local targetId = tonumber(args[1])
-    local wantedLevel = tonumber(args[2])
-    if targetId and wantedLevel ~= nil then
-        TriggerServerEvent('wanted:server:SetWantedLevel', targetId, wantedLevel)
+    if isPolice() then
+        local targetId = tonumber(args[1])
+        local wantedLevel = tonumber(args[2])
+        if targetId and wantedLevel ~= nil then
+            TriggerServerEvent('wanted:server:SetWantedLevel', targetId, wantedLevel)
+        else
+            RSGCore.Functions.Notify("Usage: /setwanted [playerID] [wantedLevel]", "error")
+        end
     else
-        RSGCore.Functions.Notify("Usage: /setwanted [playerID] [wantedLevel]", "error")
+        RSGCore.Functions.Notify("You are not authorized to use this command. Police only.", "error")
     end
 end)
 
