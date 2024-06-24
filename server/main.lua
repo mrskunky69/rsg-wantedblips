@@ -10,6 +10,14 @@ AddEventHandler('wanted:server:UpdatePlayerPosition', function(coords)
     playerPositions[src] = coords
 end)
 
+RegisterNetEvent('wanted:server:PlayerDied')
+AddEventHandler('wanted:server:PlayerDied', function()
+    local src = source
+    playerPositions[src] = nil
+    playerWantedLevels[src] = nil
+    TriggerClientEvent('wanted:client:SyncWantedPlayers', -1, playerWantedLevels)
+end)
+
 
 RegisterNetEvent('wanted:server:SetWantedLevel')
 AddEventHandler('wanted:server:SetWantedLevel', function(targetId, level)
