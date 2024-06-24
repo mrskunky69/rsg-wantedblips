@@ -21,7 +21,7 @@ local function createOrUpdateBlip(coords, isWanted)
     if isWanted then
         playerBlip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, coords.x, coords.y, coords.z)
         Citizen.InvokeNative(0x74F74D3207ED525C, playerBlip, Config.WantedBlipSprite, 1)
-        Citizen.InvokeNative(0x9CB1A1623062F402, playerBlip, "Wanted Player")
+        Citizen.InvokeNative(0x9CB1A1623062F402, playerBlip, "Wanted: " .. myName)
         Citizen.InvokeNative(0x662D364ABF16DE2F, playerBlip, Config.DefaultBlipScale)
     end
 end
@@ -54,24 +54,22 @@ local function updatePlayerBlip()
 end
 
 local function updateWantedBlips(wantedPlayers)
-    
     for playerId, blip in pairs(wantedBlips) do
         RemoveBlip(blip)
     end
     wantedBlips = {}
     
-    
     if not wantedPlayers then return end
     
-    for playerId, wantedLevel in pairs(wantedPlayers) do
-        if wantedLevel > 0 and tonumber(playerId) ~= GetPlayerServerId(PlayerId()) then
+    for playerId, wantedInfo in pairs(wantedPlayers) do
+        if wantedInfo.level > 0 and tonumber(playerId) ~= GetPlayerServerId(PlayerId()) then
             local targetPed = GetPlayerPed(GetPlayerFromServerId(tonumber(playerId)))
             if DoesEntityExist(targetPed) then
                 local coords = GetEntityCoords(targetPed)
                 local blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, coords.x, coords.y, coords.z)
                 Citizen.InvokeNative(0x74F74D3207ED525C, blip, Config.WantedBlipSprite, 1)
                 Citizen.InvokeNative(0x662D364ABF16DE2F, blip, Config.DefaultBlipScale)
-                Citizen.InvokeNative(0x9CB1A1623062F402, blip, "Wanted Player")
+                Citizen.InvokeNative(0x9CB1A1623062F402, blip, "Wanted: " .. wantedInfo.name)
                 wantedBlips[playerId] = blip
             end
         end
@@ -79,9 +77,10 @@ local function updateWantedBlips(wantedPlayers)
 end
 
 RegisterNetEvent('wanted:client:UpdateWantedLevel')
-AddEventHandler('wanted:client:UpdateWantedLevel', function(level)
+AddEventHandler('wanted:client:UpdateWantedLevel', function(level, playerName)
     local oldLevel = myWantedLevel
     myWantedLevel = level
+    myName = playerName
     updatePlayerBlip()
     
     if myWantedLevel > 0 and oldLevel == 0 then
