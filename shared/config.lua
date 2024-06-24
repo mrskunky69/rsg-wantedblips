@@ -7,7 +7,9 @@ Config = {
     WantedBlipSprite = GetHashKey("blip_ambient_bounty_target"),
     Jobs = {
         police = { blipColor = 18, tracked = true },
+        vallaw = { blipColor = 18, tracked = true },
         -- other jobs...
+        
     }
     
 }
