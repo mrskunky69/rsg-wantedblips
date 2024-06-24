@@ -134,13 +134,22 @@ end)
 
 
 
--- Add a command for law enforcement to set wanted levels
 RegisterCommand('setwanted', function(source, args)
     local targetId = tonumber(args[1])
     local wantedLevel = tonumber(args[2])
     if targetId and wantedLevel then
         TriggerServerEvent('wanted:server:SetWantedLevel', targetId, wantedLevel)
+
+        -- Get the target player's name
+        local targetName = GetPlayerName(targetId)
+        local wantedMessage = targetName .. " is now wanted at level " .. wantedLevel
+
+        -- Notify all players about the wanted status
+        for _, playerId in ipairs(GetPlayers()) do
+            TriggerClientEvent('rNotify:Tip', playerId, wantedMessage, 4000)
+        end
     else
         print("Usage: /setwanted [playerID] [wantedLevel]")
     end
 end)
+
