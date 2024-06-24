@@ -1,73 +1,71 @@
-
-
 local RSGCore = exports['rsg-core']:GetCoreObject()
 local playerBlip = nil
 local wantedBlips = {}
 local myWantedLevel = 0
 
-local function getBlipColorModifier(color)
-    
-end
-
-local function createOrUpdateBlip(coords, blipColor, blipName, blipSprite)
-    if not playerBlip then
-        playerBlip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, coords.x, coords.y, coords.z)
-    end
-
+local function removePlayerBlip()
     if playerBlip then
-        Citizen.InvokeNative(0x2B6D467DAB714E8D, playerBlip, coords.x, coords.y, coords.z)
-        Citizen.InvokeNative(0x74F74D3207ED525C, playerBlip, blipSprite or Config.DefaultBlipSprite, 1)
-        
-        
-        for i = 1, 84 do
-            Citizen.InvokeNative(0x662D364ABF16DE2F, playerBlip, i)
-        end
-        BlipAddModifier(playerBlip, joaat(getBlipColorModifier(blipColor)))
-        
-        Citizen.InvokeNative(0x9CB1A1623062F402, playerBlip, blipName)
+        RemoveBlip(playerBlip)
+        playerBlip = nil
     end
 end
+
+local function createOrUpdateBlip(coords, isWanted)
+    removePlayerBlip()
+    
+    if isWanted then
+        playerBlip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, coords.x, coords.y, coords.z)
+        Citizen.InvokeNative(0x74F74D3207ED525C, playerBlip, Config.WantedBlipSprite, 1)
+        Citizen.InvokeNative(0x9CB1A1623062F402, playerBlip, "Wanted Player")
+        Citizen.InvokeNative(0x662D364ABF16DE2F, playerBlip, Config.DefaultBlipScale)
+    end
+end
+
+local function handlePlayerDeath()
+    if myWantedLevel > 0 then
+        TriggerServerEvent('wanted:server:PlayerDied')
+        myWantedLevel = 0
+        removePlayerBlip()
+    end
+end
+
+AddEventHandler('gameEventTriggered', function(name, args)
+    if name == "CEventNetworkEntityDamage" then
+        local victim = args[1]
+        local attacker = args[2]
+        local isDead = args[4] == 1
+        
+        if victim == PlayerPedId() and isDead then
+            handlePlayerDeath()
+        end
+    end
+end)
 
 local function updatePlayerBlip()
-    local player = RSGCore.Functions.GetPlayerData()
     local ped = PlayerPedId()
     local coords = GetEntityCoords(ped)
-    
-    local blipColor = Config.DefaultBlipColor
-    local blipName = "Player"
-    local blipSprite = Config.DefaultBlipSprite
-
-    if myWantedLevel > 0 then
-        blipColor = Config.WantedBlipColor or 1 -- Red by default
-        blipName = "Wanted Player"
-        blipSprite = Config.WantedBlipSprite or GetHashKey("blip_ambient_bounty_target")
-    elseif Config.Jobs[player.job.name] then
-        blipColor = Config.Jobs[player.job.name].blipColor
-        blipName = player.job.name
-    elseif Config.Gangs[player.gang.name] then
-        blipColor = Config.Gangs[player.gang.name].blipColor
-        blipName = player.gang.name
-    end
-
-    createOrUpdateBlip(coords, blipColor, blipName, blipSprite)
+    createOrUpdateBlip(coords, myWantedLevel > 0)
     TriggerServerEvent('wanted:server:UpdatePlayerPosition', coords)
 end
 
-
 local function updateWantedBlips(wantedPlayers)
-    for k, v in pairs(wantedBlips) do
-        RemoveBlip(v)
+    -- Remove all existing wanted blips
+    for playerId, blip in pairs(wantedBlips) do
+        RemoveBlip(blip)
     end
     wantedBlips = {}
-
+    
+    -- If wantedPlayers is nil, just return after clearing existing blips
+    if not wantedPlayers then return end
+    
     for playerId, wantedLevel in pairs(wantedPlayers) do
-        if wantedLevel > 0 and GetPlayerFromServerId(playerId) ~= PlayerId() then
-            local targetPed = GetPlayerPed(GetPlayerFromServerId(playerId))
+        if wantedLevel > 0 and tonumber(playerId) ~= GetPlayerServerId(PlayerId()) then
+            local targetPed = GetPlayerPed(GetPlayerFromServerId(tonumber(playerId)))
             if DoesEntityExist(targetPed) then
                 local coords = GetEntityCoords(targetPed)
                 local blip = Citizen.InvokeNative(0x554D9D53F696D002, 1664425300, coords.x, coords.y, coords.z)
-                Citizen.InvokeNative(0x74F74D3207ED525C, blip, Config.WantedBlipSprite or GetHashKey("blip_ambient_bounty_target"), 1)
-                BlipAddModifier(blip, joaat(getBlipColorModifier(Config.WantedBlipColor or 1)))
+                Citizen.InvokeNative(0x74F74D3207ED525C, blip, Config.WantedBlipSprite, 1)
+                Citizen.InvokeNative(0x662D364ABF16DE2F, blip, Config.DefaultBlipScale)
                 Citizen.InvokeNative(0x9CB1A1623062F402, blip, "Wanted Player")
                 wantedBlips[playerId] = blip
             end
@@ -77,8 +75,16 @@ end
 
 RegisterNetEvent('wanted:client:UpdateWantedLevel')
 AddEventHandler('wanted:client:UpdateWantedLevel', function(level)
+    local oldLevel = myWantedLevel
     myWantedLevel = level
     updatePlayerBlip()
+    
+    if myWantedLevel > 0 and oldLevel == 0 then
+        TriggerEvent('rNotify:NotifyLeft', "YOU ARE A WANTED PERSON", "DAMN", "generic_textures", "tick", 4000)
+    elseif myWantedLevel == 0 and oldLevel > 0 then
+        TriggerEvent('rNotify:NotifyLeft', "YOU'RE NO LONGER WANTED", "PHEW", "generic_textures", "tick", 4000)
+        removePlayerBlip()
+    end
 end)
 
 RegisterNetEvent('wanted:client:SyncWantedPlayers')
@@ -86,22 +92,30 @@ AddEventHandler('wanted:client:SyncWantedPlayers', function(wantedPlayers)
     updateWantedBlips(wantedPlayers)
 end)
 
+RegisterNetEvent('wanted:client:NotifyWanted')
+AddEventHandler('wanted:client:NotifyWanted', function(playerName, isWanted)
+    if isWanted then
+        TriggerEvent('rNotify:NotifyLeft', playerName .. " IS NOW WANTED", "HUNT THEM", "generic_textures", "tick", 4000)
+    else
+        TriggerEvent('rNotify:NotifyLeft', playerName .. " IS NO LONGER WANTED", "PHEW", "generic_textures", "tick", 4000)
+    end
+end)
 
-
--- Add a command for law enforcement to set wanted levels
 RegisterCommand('setwanted', function(source, args)
     local targetId = tonumber(args[1])
     local wantedLevel = tonumber(args[2])
-    if targetId and wantedLevel then
+    if targetId and wantedLevel ~= nil then
         TriggerServerEvent('wanted:server:SetWantedLevel', targetId, wantedLevel)
-
-        -- Get the target player's name
-        local targetName = GetPlayerName(targetId)
-        local wantedMessage = targetName .. " is now wanted at level " .. wantedLevel
-
-        -- Notify all players about the wanted status
-        TriggerClientEvent('rNotify:Tip', -1, wantedMessage, 4000)
     else
-        print("Usage: /setwanted [playerID] [wantedLevel]")
+        RSGCore.Functions.Notify("Usage: /setwanted [playerID] [wantedLevel]", "error")
+    end
+end)
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(Config.BlipUpdateInterval)
+        if myWantedLevel > 0 then
+            updatePlayerBlip()
+        end
     end
 end)
