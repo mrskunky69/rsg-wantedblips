@@ -60,7 +60,7 @@ local function updatePlayerBlip()
     end
 
     createOrUpdateBlip(coords, blipColor, blipName, blipSprite)
-    TriggerServerEvent('madv.gps:server:UpdatePlayerPosition', coords)
+    TriggerServerEvent('wanted:server:UpdatePlayerPosition', coords)
 end
 
 
