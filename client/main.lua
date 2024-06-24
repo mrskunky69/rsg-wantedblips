@@ -4,6 +4,7 @@ local RSGCore = exports['rsg-core']:GetCoreObject()
 local playerBlip = nil
 local wantedBlips = {}
 local myWantedLevel = 0
+local isDead = false
 
 local function getBlipColorModifier(color)
     
@@ -33,6 +34,15 @@ local function updatePlayerBlip()
     local ped = PlayerPedId()
     local coords = GetEntityCoords(ped)
     
+    if isDead then
+        if playerBlip then
+            RemoveBlip(playerBlip)
+            playerBlip = nil
+        end
+        TriggerServerEvent('madv.gps:server:PlayerDied')
+        return
+    end
+    
     local blipColor = Config.DefaultBlipColor
     local blipName = "Player"
     local blipSprite = Config.DefaultBlipSprite
@@ -50,7 +60,7 @@ local function updatePlayerBlip()
     end
 
     createOrUpdateBlip(coords, blipColor, blipName, blipSprite)
-    TriggerServerEvent('wanted:server:UpdatePlayerPosition', coords)
+    TriggerServerEvent('madv.gps:server:UpdatePlayerPosition', coords)
 end
 
 
@@ -84,6 +94,42 @@ end)
 RegisterNetEvent('wanted:client:SyncWantedPlayers')
 AddEventHandler('wanted:client:SyncWantedPlayers', function(wantedPlayers)
     updateWantedBlips(wantedPlayers)
+end)
+
+AddEventHandler('gameEventTriggered', function(name, args)
+    if name == 'CEventNetworkEntityDamage' then
+        local victim = args[1]
+        local attacker = args[2]
+        local isDead = args[4] == 1
+        
+        if victim == PlayerPedId() and isDead then
+            isDead = true
+            updatePlayerBlip()
+        end
+    end
+end)
+
+AddEventHandler('onResourceStart', function(resourceName)
+    if (GetCurrentResourceName() ~= resourceName) then
+        return
+    end
+    isDead = false
+end)
+
+RegisterNetEvent('RSGCore:Client:OnPlayerLoaded')
+AddEventHandler('RSGCore:Client:OnPlayerLoaded', function()
+    isDead = false
+    updatePlayerBlip()
+end)
+
+-- Add this to handle respawn
+RegisterNetEvent('RSGCore:Client:OnPlayerUnload')
+AddEventHandler('RSGCore:Client:OnPlayerUnload', function()
+    isDead = false
+    if playerBlip then
+        RemoveBlip(playerBlip)
+        playerBlip = nil
+    end
 end)
 
 
