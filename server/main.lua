@@ -18,18 +18,19 @@ AddEventHandler('wanted:server:SetWantedLevel', function(targetId, level)
         
         local oldLevel = playerWantedLevels[targetId] or 0
         
-        if level == 0 then
-            playerWantedLevels[targetId] = nil
-        else
-            playerWantedLevels[targetId] = level
-        end
-        
-        TriggerClientEvent('wanted:client:UpdateWantedLevel', targetId, level)
-        TriggerClientEvent('wanted:client:SyncWantedPlayers', -1, playerWantedLevels)
-        
         local targetPlayer = RSGCore.Functions.GetPlayer(targetId)
         if targetPlayer then
             local playerName = targetPlayer.PlayerData.charinfo.firstname .. " " .. targetPlayer.PlayerData.charinfo.lastname
+            
+            if level == 0 then
+                playerWantedLevels[targetId] = nil
+            else
+                playerWantedLevels[targetId] = {level = level, name = playerName}
+            end
+            
+            TriggerClientEvent('wanted:client:UpdateWantedLevel', targetId, level, playerName)
+            TriggerClientEvent('wanted:client:SyncWantedPlayers', -1, playerWantedLevels)
+            
             if level > 0 and oldLevel == 0 then
                 TriggerClientEvent('wanted:client:NotifyWanted', -1, playerName, true)
             elseif level == 0 and oldLevel > 0 then
