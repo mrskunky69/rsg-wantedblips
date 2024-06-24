@@ -10,20 +10,12 @@ AddEventHandler('wanted:server:UpdatePlayerPosition', function(coords)
     playerPositions[src] = coords
 end)
 
-RegisterNetEvent('wanted:server:PlayerDied')
-AddEventHandler('wanted:server:PlayerDied', function()
-    local src = source
-    playerPositions[src] = nil
-    playerWantedLevels[src] = nil
-    TriggerClientEvent('wanted:client:SyncWantedPlayers', -1, playerWantedLevels)
-end)
-
 
 RegisterNetEvent('wanted:server:SetWantedLevel')
 AddEventHandler('wanted:server:SetWantedLevel', function(targetId, level)
     local src = source
     local Player = RSGCore.Functions.GetPlayer(src)
-    if Player.PlayerData.job.name == 'police' else if Player.PlayerData.job.type == 'leo' then -- Ensure only law enforcement can set wanted levels
+    if Player.PlayerData.job.name == 'police' then -- Ensure only law enforcement can set wanted levels
         playerWantedLevels[targetId] = level
         TriggerClientEvent('wanted:client:UpdateWantedLevel', targetId, level)
         TriggerClientEvent('wanted:client:SyncWantedPlayers', -1, playerWantedLevels)
