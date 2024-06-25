@@ -185,6 +185,12 @@ local function updatePlayerBlip()
     TriggerServerEvent('wanted:server:UpdatePlayerPosition', coords)
 end
 
+local function isPolice()
+    local Player = RSGCore.Functions.GetPlayerData()
+    return Player.job and Player.job.type == 'leo' -- Ensure job exists before checking type
+end
+
+
 local function updateWantedBlips(wantedPlayers)
     for playerId, blip in pairs(wantedBlips) do
         RemoveBlip(blip)
