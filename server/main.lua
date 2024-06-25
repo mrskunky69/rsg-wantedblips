@@ -1,3 +1,5 @@
+
+
 local RSGCore = exports['rsg-core']:GetCoreObject()
 local playerPositions = {}
 local playerWantedLevels = {}
@@ -16,7 +18,7 @@ AddEventHandler('wanted:server:SetWantedLevel', function(targetId, level)
         targetId = tonumber(targetId)
         level = tonumber(level)
         
-        local oldLevel = playerWantedLevels[targetId] or 0
+        local oldLevel = playerWantedLevels[targetId] and playerWantedLevels[targetId].level or 0
         
         local targetPlayer = RSGCore.Functions.GetPlayer(targetId)
         if targetPlayer then
@@ -24,6 +26,8 @@ AddEventHandler('wanted:server:SetWantedLevel', function(targetId, level)
             
             if level == 0 then
                 playerWantedLevels[targetId] = nil
+                
+                TriggerClientEvent('wanted:client:NotifyArrested', -1, playerName)
             else
                 playerWantedLevels[targetId] = {level = level, name = playerName}
             end
@@ -43,16 +47,14 @@ end)
 RegisterNetEvent('wanted:server:PlayerDied')
 AddEventHandler('wanted:server:PlayerDied', function()
     local src = source
-    if playerWantedLevels[src] and playerWantedLevels[src] > 0 then
+    if playerWantedLevels[src] and playerWantedLevels[src].level > 0 then
+        local playerName = playerWantedLevels[src].name
         playerWantedLevels[src] = nil
-        TriggerClientEvent('wanted:client:UpdateWantedLevel', src, 0)
+        TriggerClientEvent('wanted:client:UpdateWantedLevel', src, 0, playerName)
         TriggerClientEvent('wanted:client:SyncWantedPlayers', -1, playerWantedLevels)
         
-        local Player = RSGCore.Functions.GetPlayer(src)
-        if Player then
-            local playerName = Player.PlayerData.charinfo.firstname .. " " .. Player.PlayerData.charinfo.lastname
-            TriggerClientEvent('wanted:client:NotifyWanted', -1, playerName, false)
-        end
+        
+        TriggerClientEvent('wanted:client:NotifyWanted', -1, playerName, false)
     end
 end)
 
