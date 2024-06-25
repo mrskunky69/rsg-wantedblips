@@ -222,16 +222,25 @@ local function updateWantedUI()
         WantedUI:ShowMessage(1, true)
         WantedUI:SetMainTextLabel(1, "LAW_UI_WANTED_M")
         WantedUI:SetLowerTextRawText(1, 0, "WANTED: " .. myName)
-    else
-        WantedUI:ShowMessage(1, false)
+    
     end
 end
 
 
+local lastWantedLevel = -1
+local lastPoliceStatus = false
+
 Citizen.CreateThread(function()
     while true do
-        Citizen.Wait(1000) -- Update every second
-        updateWantedUI()
+        Citizen.Wait(1000) -- Check every second, but only update when necessary
+        local currentWantedLevel = myWantedLevel
+        local currentPoliceStatus = isPolice()
+
+        if currentWantedLevel ~= lastWantedLevel or currentPoliceStatus ~= lastPoliceStatus then
+            updateWantedUI()
+            lastWantedLevel = currentWantedLevel
+            lastPoliceStatus = currentPoliceStatus
+        end
     end
 end)
 
@@ -241,18 +250,12 @@ AddEventHandler('wanted:client:UpdateWantedLevel', function(level, playerName)
     myWantedLevel = level
     myName = playerName
     
-    if myWantedLevel > 0 then
-        WantedUI:ShowMessage(1, true)
-        WantedUI:SetMainTextLabel(1, "LAW_UI_WANTED_M")
-        WantedUI:SetLowerTextRawText(1, 0, "WANTED: " .. myName)
-        if oldLevel == 0 then
-            TriggerEvent('rNotify:NotifyLeft', "YOU ARE A WANTED PERSON", "DAMN", "generic_textures", "temp_pedshot", 4000)
-        end
-    else
-        WantedUI:ShowMessage(1, false)
-        if oldLevel > 0 then
-            TriggerEvent('rNotify:NotifyLeft', "YOU'RE NO LONGER WANTED", "PHEW", "generic_textures", "temp_pedshot", 4000)
-        end
+    updateWantedUI()
+    
+    if myWantedLevel > 0 and oldLevel == 0 then
+        TriggerEvent('rNotify:NotifyLeft', "YOU ARE A WANTED PERSON", "DAMN", "generic_textures", "temp_pedshot", 4000)
+    elseif myWantedLevel == 0 and oldLevel > 0 then
+        TriggerEvent('rNotify:NotifyLeft', "YOU'RE NO LONGER WANTED", "PHEW", "generic_textures", "temp_pedshot", 4000)
     end
     
     updatePlayerBlip()
@@ -266,16 +269,16 @@ end)
 RegisterNetEvent('wanted:client:NotifyWanted')
 AddEventHandler('wanted:client:NotifyWanted', function(playerName, isWanted)
     if isWanted then
-        WantedUI:ShowKnownPulse(3, true)
-        WantedUI:SetMainTextLabel(3, "LAW_UI_CRIME_REPORTED")
+        WantedUI:SetMainTextLabel(3, "LAW_UI_WANTED_M")
         WantedUI:SetLowerTextRawText(3, 0, playerName .. " is now wanted")
+		WantedUI:SetLowerTextRawText(1, 0, "WANTED: " .. playerName )
         WantedUI:ShowMessage(3, true)
         
         TriggerEvent('rNotify:NotifyLeft', playerName .. " IS NOW WANTED", "HUNT THEM", "generic_textures", "temp_pedshot", 4000)
         
         
         Citizen.SetTimeout(5000, function()
-            WantedUI:ShowKnownPulse(3, false)
+        
         end)
     else
         WantedUI:ShowShortWantedCooldown(3, true)
